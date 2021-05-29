@@ -12,7 +12,7 @@
             </li>
             {% if form.instance.pk %}
                 <li class="breadcrumb-item">
-                    <a href="{{ form.instance.user.get_absolute_url }}">{{ form.instance.user.get_full_name }}</a>
+                    <a href="{{ form.instance.user.get_absolute_url }}">{{ form.instance.user.user_info.get_full_name }}</a>
                 </li>
             {% else %}
                 <li class="breadcrumb-item">Create</li>

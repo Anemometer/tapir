@@ -6,7 +6,6 @@ import random
 
 from tapir.accounts.models import TapirUser
 from tapir.coop.models import ShareOwner, ShareOwnership, DraftUser
-from tapir.coop.views import create_user_from_shareowner
 from tapir.finance.models import Invoice
 from tapir.odoo.models import OdooPartner
 from tapir.shifts.models import (
@@ -151,7 +150,7 @@ def populate_users():
             start_date=datetime.date.today(),
         )
 
-        create_user_from_shareowner(share_owner)
+        # TODO Théo 25.05.21 create_user_from_shareowner(share_owner)
         tapir_user = share_owner.user
         tapir_user.is_staff = False
         tapir_user.is_active = True

@@ -1,6 +1,5 @@
 from datetime import date
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -14,18 +13,20 @@ from django.utils.translation import gettext_lazy as _
 from django.views import generic
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST, require_GET
-from django.views.generic import UpdateView, CreateView
+from django.views.generic import UpdateView, CreateView, FormView
 
+from tapir.accounts.forms import UserInfoAdminForm
 from tapir.accounts.models import TapirUser
 from tapir.coop import pdfs
 from tapir.coop.forms import (
     CoopShareOwnershipForm,
     DraftUserForm,
-    DraftUserRegisterForm,
     ShareOwnerForm,
+    DraftUserCreateForm,
+    DraftUserRegisterForm,
 )
 from tapir.coop.models import ShareOwnership, DraftUser, ShareOwner
-from tapir.utils.user_utils import UserUtils
+from tapir.coop.pdfs import get_membership_agreement_pdf
 
 
 class ShareOwnershipViewMixin:
@@ -78,27 +79,62 @@ class DraftUserListView(PermissionRequiredMixin, DraftUserViewMixin, generic.Lis
     permission_required = "coop.manage"
 
 
-class DraftUserCreateView(
-    PermissionRequiredMixin, DraftUserViewMixin, generic.CreateView
-):
+class DraftUserCreateView(PermissionRequiredMixin, FormView):
     permission_required = "coop.manage"
     template_name = "coop/draftuser_create_form.html"
+    form_class = DraftUserCreateForm
+
+    def form_valid(self, form):
+        draft_user = form.save()
+        return redirect(draft_user.get_absolute_url())
 
 
-class DraftUserRegisterView(DraftUserViewMixin, generic.CreateView):
+class DraftUserRegisterView(DraftUserViewMixin, FormView):
     template_name = "coop/draftuser_register_form.html"
     form_class = DraftUserRegisterForm
     success_url = "/coop/user/draft/register/confirm"
+
+    def form_valid(self, form):
+        draft_user = form.save()
+        mail = EmailMessage(
+            subject="Willkommen bei SuperCoop eG!",
+            body=render_to_string(
+                "coop/email/membership_confirmation_welcome.txt", {"owner": draft_user}
+            ),
+            from_email="mitglied@supercoop.de",
+            to=[draft_user.user_info.email],
+            attachments=[
+                (
+                    "Beteiligungserklärung %s.pdf"
+                    % draft_user.user_info.get_display_name(),
+                    get_membership_agreement_pdf(draft_user).write_pdf(),
+                    "application/pdf",
+                )
+            ],
+        )
+        mail.send()
+        return redirect(self.success_url)
 
 
 class DraftUserConfirmRegistrationView(DraftUserViewMixin, generic.TemplateView):
     template_name = "coop/draftuser_confirm_registration.html"
 
 
-class DraftUserUpdateView(
-    PermissionRequiredMixin, DraftUserViewMixin, generic.UpdateView
-):
+class DraftUserUpdateView(PermissionRequiredMixin, FormView):
     permission_required = "coop.manage"
+    template_name = "coop/draftuser_edit_form.html"
+    form_class = DraftUserCreateForm
+
+    def get_initial(self):
+        initial = super().get_initial()
+        draft_user = DraftUser.objects.get(id=self.kwargs["pk"])
+        initial["DraftUser"] = draft_user
+        initial["UserInfo"] = draft_user.user_info
+        return initial
+
+    def form_valid(self, form):
+        draft_user = form.save()
+        return redirect(draft_user.get_absolute_url())
 
 
 class DraftUserDetailView(
@@ -138,8 +174,8 @@ class ShareOwnerUpdateView(
 def draftuser_membership_agreement(request, pk):
     draft_user = get_object_or_404(DraftUser, pk=pk)
     filename = "Beteiligungserklärung %s %s.pdf" % (
-        draft_user.first_name,
-        draft_user.last_name,
+        draft_user.user_info.first_name,
+        draft_user.user_info.last_name,
     )
 
     response = HttpResponse(content_type="application/pdf")
@@ -191,16 +227,7 @@ def create_user_from_draftuser(request, pk):
 
     with transaction.atomic():
         u = TapirUser.objects.create(
-            username=draft.username,
-            first_name=draft.first_name,
-            last_name=draft.last_name,
-            email=draft.email,
-            birthdate=draft.birthdate,
-            street=draft.street,
-            street_2=draft.street_2,
-            postcode=draft.postcode,
-            city=draft.city,
-            country=draft.country,
+            user_info=draft.user_info,
         )
         if draft.num_shares > 0:
             share_owner = ShareOwner.objects.create(user=u, is_company=False)
@@ -228,7 +255,7 @@ class CreateUserFromShareOwnerView(PermissionRequiredMixin, generic.CreateView):
         # Not sure if 403 is the right error code here...
         if owner.user is not None:
             return HttpResponseForbidden("This ShareOwner already has a User")
-        if owner.is_company:
+        if owner.user_info.is_company:
             return HttpResponseForbidden("This ShareOwner is a company")
 
         return super().dispatch(request, *args, **kwargs)
@@ -237,15 +264,7 @@ class CreateUserFromShareOwnerView(PermissionRequiredMixin, generic.CreateView):
         kwargs = super().get_form_kwargs()
         owner = self.get_shareowner()
         user = TapirUser(
-            first_name=owner.first_name,
-            last_name=owner.last_name,
-            email=owner.email,
-            birthdate=owner.birthdate,
-            street=owner.street,
-            street_2=owner.street_2,
-            postcode=owner.postcode,
-            city=owner.city,
-            country=owner.country,
+            user_info=owner.user_info,
         )
         kwargs.update({"instance": user})
         return kwargs
@@ -255,7 +274,6 @@ class CreateUserFromShareOwnerView(PermissionRequiredMixin, generic.CreateView):
             response = super().form_valid(form)
             owner = self.get_shareowner()
             owner.user = form.instance
-            owner.blank_info_fields()
             owner.save()
             return response
 
@@ -278,18 +296,9 @@ def create_share_owner_from_draftuser(request, pk):
         )
 
     with transaction.atomic():
-        share_owner = ShareOwner.objects.create(is_company=False)
+        share_owner = ShareOwner.objects.create()
         share_owner.user = None
-        share_owner.company_name = ""
-        share_owner.first_name = draft.first_name
-        share_owner.last_name = draft.last_name
-        share_owner.email = draft.email
-        share_owner.birthdate = draft.birthdate
-        share_owner.street = draft.street
-        share_owner.street_2 = draft.street_2
-        share_owner.postcode = draft.postcode
-        share_owner.city = draft.city
-        share_owner.country = draft.country
+        share_owner.user_info = draft.user_info
         share_owner.is_investing = True
         share_owner.save()
 
@@ -325,11 +334,11 @@ def send_shareowner_membership_confirmation_welcome_email(request, pk):
             "coop/email/membership_confirmation_welcome.txt", {"owner": owner}
         ),
         from_email="mitglied@supercoop.de",
-        to=[owner.get_info().email],
+        to=[owner.user_info.email],
         attachments=[
             (
                 "Mitgliedschaftsbestätigung %s.pdf"
-                % owner.get_info().get_display_name(),
+                % owner.user_info.get_display_name(),
                 pdfs.get_shareowner_membership_confirmation_pdf(owner).write_pdf(),
                 "application/pdf",
             )
@@ -346,7 +355,7 @@ def send_shareowner_membership_confirmation_welcome_email(request, pk):
 @permission_required("coop.manage")
 def shareowner_membership_confirmation(request, pk):
     owner = get_object_or_404(ShareOwner, pk=pk)
-    filename = "Mitgliedschaftsbestätigung %s.pdf" % owner.get_display_name()
+    filename = "Mitgliedschaftsbestätigung %s.pdf" % owner.user_info.get_display_name()
 
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = 'filename="{}"'.format(filename)

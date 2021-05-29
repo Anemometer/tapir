@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from tapir.accounts.models import TapirUser
+from tapir.accounts.models import TapirUser, UserInfo
+
+admin.site.register(UserInfo)
 
 
 @admin.register(TapirUser)

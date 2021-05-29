@@ -1,26 +1,92 @@
 from django import forms
 from django.contrib.auth import forms as auth_forms
+from django.forms import TextInput, HiddenInput
 
-from tapir.accounts.models import TapirUser
+from tapir.accounts.models import UserInfo
 from tapir.utils.forms import DateInput
 
 
-class TapirUserForm(forms.ModelForm):
+class UserInfoAdminForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields:
+            self.fields[field].required = False
+
+        for field in self.Meta.required:
+            self.fields[field].required = True
+
     class Meta:
-        model = TapirUser
+        model = UserInfo
         fields = [
             "first_name",
             "last_name",
             "username",
             "email",
-            "birthdate",
+            "phone_number",
+            "date_of_birth",
             "street",
             "street_2",
             "postcode",
             "city",
+            "country",
+            "preferred_language",
+            "is_from_startnext",
+            "is_using_deferred_payments",
+            "is_company",
+        ]
+        required = [
+            "first_name",
+            "last_name",
+            "username",
+            "email",
+            "phone_number",
         ]
         widgets = {
-            "birthdate": DateInput(),
+            "date_of_birth": DateInput(),
+            "username": TextInput(attrs={"readonly": True}),
+            "phone_number": TextInput(attrs={"pattern": "^\\+?\\d{0,13}"}),
+        }
+
+
+class UserInfoNonAdminForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields:
+            self.fields[field].required = False
+
+        for field in self.Meta.required:
+            self.fields[field].required = True
+
+    class Meta:
+        model = UserInfo
+        fields = [
+            "first_name",
+            "last_name",
+            "username",
+            "email",
+            "phone_number",
+            "date_of_birth",
+            "street",
+            "street_2",
+            "postcode",
+            "city",
+            "country",
+            "preferred_language",
+            "is_company",
+        ]
+        required = [
+            "first_name",
+            "last_name",
+            "username",
+            "email",
+            "phone_number",
+        ]
+        widgets = {
+            "date_of_birth": DateInput(),
+            "username": TextInput(attrs={"readonly": True}),
+            "phone_number": TextInput(attrs={"pattern": "^\\+?\\d{0,13}"}),
         }
 
 

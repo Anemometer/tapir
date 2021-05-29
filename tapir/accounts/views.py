@@ -11,8 +11,8 @@ from django.views import generic
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 
-from tapir.accounts.forms import TapirUserForm, PasswordResetForm
-from tapir.accounts.models import TapirUser
+from tapir.accounts.forms import PasswordResetForm, UserInfoAdminForm
+from tapir.accounts.models import TapirUser, UserInfo
 from tapir.shifts.models import ShiftAttendance, ShiftAttendanceTemplate
 
 
@@ -44,8 +44,8 @@ class UserMeView(LoginRequiredMixin, generic.RedirectView):
 
 class UserUpdateView(PermissionRequiredMixin, generic.UpdateView):
     permission_required = "accounts.manage"
-    model = TapirUser
-    form_class = TapirUserForm
+    model = UserInfo
+    form_class = UserInfoAdminForm
     template_name = "accounts/user_form.html"
 
 

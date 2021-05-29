@@ -1,12 +1,10 @@
 from django import forms
 from django.contrib.admin.widgets import AdminDateWidget
-from django.core.mail import EmailMessage
-from django.forms import TextInput
-from django.template.loader import render_to_string
 
+from tapir.accounts.forms import UserInfoAdminForm, UserInfoNonAdminForm
+from tapir.accounts.models import UserInfo
 from tapir.coop.models import ShareOwnership, DraftUser, ShareOwner
-from tapir.coop.pdfs import get_membership_agreement_pdf
-from tapir.utils.forms import DateInput
+from tapir.utils.forms import CombinedFormBase
 
 
 class CoopShareOwnershipForm(forms.ModelForm):
@@ -25,96 +23,41 @@ class DraftUserForm(forms.ModelForm):
     class Meta:
         model = DraftUser
         fields = [
-            "first_name",
-            "last_name",
-            "username",
-            "email",
-            "phone_number",
-            "birthdate",
-            "street",
-            "street_2",
-            "postcode",
-            "city",
             "attended_welcome_session",
         ]
-        widgets = {
-            "birthdate": DateInput(),
-            "username": TextInput(attrs={"readonly": True}),
-        }
 
 
-class DraftUserRegisterForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class DraftUserCreateForm(CombinedFormBase):
+    form_classes = [UserInfoAdminForm, DraftUserForm]
 
-        for field in self.Meta.required:
-            self.fields[field].required = True
-
-    def save(self, commit=True):
-        draft_user: DraftUser = super().save(commit)
-        mail = EmailMessage(
-            subject="Willkommen bei SuperCoop eG!",
-            body=render_to_string(
-                "coop/email/membership_confirmation_welcome.txt", {"owner": draft_user}
-            ),
-            from_email="mitglied@supercoop.de",
-            to=[draft_user.email],
-            attachments=[
-                (
-                    "Beteiligungserklärung %s.pdf" % draft_user.get_display_name(),
-                    get_membership_agreement_pdf(draft_user).write_pdf(),
-                    "application/pdf",
-                )
-            ],
-        )
-        mail.send()
+    def save(self) -> DraftUser:
+        user_info_form = getattr(self, UserInfoAdminForm.__name__.lower())
+        user_info: UserInfo = user_info_form.save()
+        draft_user_form = getattr(self, DraftUserForm.__name__.lower())
+        draft_user: DraftUser = draft_user_form.save()
+        draft_user.user_info = user_info
+        draft_user.save()
         return draft_user
 
-    class Meta:
-        model = DraftUser
-        fields = [
-            "first_name",
-            "last_name",
-            "username",
-            "email",
-            "phone_number",
-            "birthdate",
-            "street",
-            "street_2",
-            "postcode",
-            "city",
-        ]
-        required = [
-            "first_name",
-            "last_name",
-            "username",
-            "email",
-            "phone_number",
-            "birthdate",
-            "street",
-            "postcode",
-            "city",
-        ]
-        widgets = {
-            "birthdate": DateInput(),
-            "username": TextInput(attrs={"readonly": True}),
-            "phone_number": TextInput(attrs={"pattern": "^\\+?\\d{0,13}"}),
-        }
+
+class DraftUserRegisterForm(CombinedFormBase):
+    form_classes = [UserInfoNonAdminForm, DraftUserForm]
+
+    def save(self) -> DraftUser:
+        user_info_form: UserInfoNonAdminForm = getattr(
+            self, UserInfoNonAdminForm.__name__.lower()
+        )
+        user_info: UserInfo = user_info_form.save()
+        draft_user_form = getattr(self, DraftUserForm.__name__.lower())
+        draft_user: DraftUser = draft_user_form.save()
+        draft_user.user_info = user_info
+        draft_user.save()
+        return draft_user
 
 
 class ShareOwnerForm(forms.ModelForm):
     class Meta:
         model = ShareOwner
         fields = [
-            "first_name",
-            "last_name",
-            "email",
-            "birthdate",
-            "street",
-            "street_2",
-            "postcode",
-            "city",
+            "user_info",
         ]
-        widgets = {
-            "birthdate": DateInput(),
-        }

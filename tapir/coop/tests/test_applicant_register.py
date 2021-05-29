@@ -28,7 +28,7 @@ class ApplicantTestBase(TapirSeleniumTestBase):
         self.selenium.find_element_by_id("id_phone_number").send_keys(user.phone_number)
         # Somehow send_keys doesn't work for <input type="date"> in Firefox
         self.selenium.execute_script(
-            "document.getElementById('id_birthdate').value = '"
+            "document.getElementById('id_date_of_birth').value = '"
             + user.get_date_of_birth_str_for_input_field()
             + "';"
         )

@@ -11,7 +11,7 @@
                 <a href="{% url "coop:draftuser_list" %}">{% trans "Applicants" %}</a>
             </li>
             <li class="breadcrumb-item">
-                {{ object.get_display_name }}
+                {{ object.user_info.get_display_name }}
             </li>
         </ol>
     </nav>
@@ -21,21 +21,21 @@
             <div class="card-body" id="draft_user_detail_card">
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Name" %}:</div>
-                    <div class="col-9" id="draft_user_display_name">{{ object.get_display_name }}</div>
+                    <div class="col-9" id="draft_user_display_name">{{ object.user_info.get_display_name }}</div>
                 </div>
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Username" %}:</div>
-                    <div class="col-9" id="draft_user_username">{{ object.username }}</div>
+                    <div class="col-9" id="draft_user_username">{{ object.user_info.username }}</div>
                 </div>
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Email" %}:</div>
-                    <div class="col-9" id="draft_user_email">{{ object.email }}</div>
+                    <div class="col-9" id="draft_user_email">{{ object.user_info.email }}</div>
                 </div>
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Birthdate" %}:</div>
                     <div class="col-9" id="draft_user_birthdate">
-                        {% if object.birthdate %}
-                            {{ object.birthdate|date:"d.m.Y" }}
+                        {% if object.user_info.date_of_birth %}
+                            {{ object.user_info.date_of_birth|date:"d.m.Y" }}
                         {% else %}
                             <span class="text-danger">Missing</span>
                         {% endif %}</div>
@@ -43,8 +43,8 @@
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Address" %}:</div>
                     <div class="col-9" id="draft_user_address">
-                        {% if object.street and object.city %}
-                            {{ object.get_display_address }}
+                        {% if object.user_info.street and object.user_info.city %}
+                            {{ object.user_info.get_display_address }}
                         {% else %}
                             <span class="text-danger">Missing</span>
                         {% endif %}

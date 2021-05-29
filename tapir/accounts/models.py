@@ -97,30 +97,58 @@ class LdapUser(AbstractUser):
         return super().has_perm(perm=perm, obj=obj)
 
 
-class TapirUser(LdapUser):
+class UserInfo(models.Model):
     username_validator = validators.UsernameValidator
 
-    birthdate = models.DateField(_("Birthdate"), blank=True, null=True)
-    street = models.CharField(_("Street and house number"), max_length=150, blank=True)
-    street_2 = models.CharField(_("Extra address line"), max_length=150, blank=True)
-    postcode = models.CharField(_("Postcode"), max_length=32, blank=True)
-    city = models.CharField(_("City"), max_length=50, blank=True)
-    country = CountryField(_("Country"), blank=True, default="DE")
+    username = models.CharField(
+        _("username"),
+        max_length=150,
+        validators=[username_validator],
+    )
+
+    first_name = models.CharField(_("First name"), max_length=150)
+    last_name = models.CharField(_("Last name"), max_length=150)
+    email = models.EmailField(_("Email address"))
+
+    is_company = models.BooleanField(_("Is company"), blank=False)
+    company_name = models.CharField(_("Company name"), max_length=150, blank=True)
+
+    phone_number = models.CharField(_("Phone number"), blank=True, max_length=20)
+    date_of_birth = models.DateField(_("Date of birth"), null=True)
+    street = models.CharField(_("Street and house number"), max_length=150, null=True)
+    street_2 = models.CharField(_("Extra address line"), max_length=150, null=True)
+    postcode = models.CharField(_("Postcode"), max_length=32, null=True)
+    city = models.CharField(_("City"), max_length=50, null=True)
+    country = CountryField(_("Country"), null=True, default="DE")
 
     preferred_language = models.CharField(
         _("Preferred Language"),
         choices=utils.models.PREFERRED_LANGUAGES,
         default="de",
         max_length=16,
+        blank=True,
+    )
+
+    is_from_startnext = models.BooleanField(
+        _("Comes from Startnext May 2021"), default=False
+    )
+    is_using_deferred_payments = models.BooleanField(
+        _("Uses deferred payments"), default=False
     )
 
     def get_display_name(self):
+        if self.is_company:
+            return self.company_name
         return UserUtils.build_display_name(self.first_name, self.last_name)
 
     def get_display_address(self):
         return UserUtils.build_display_address(
             self.street, self.street_2, self.postcode, self.city
         )
+
+
+class TapirUser(LdapUser):
+    user_info = models.OneToOneField(UserInfo, on_delete=models.PROTECT, null=True)
 
     def get_absolute_url(self):
         return reverse("accounts:user_detail", args=[self.pk])
