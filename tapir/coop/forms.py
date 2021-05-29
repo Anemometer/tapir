@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.admin.widgets import AdminDateWidget
+from django.forms import DateInput
 
 from tapir.accounts.forms import UserInfoAdminForm, UserInfoNonAdminForm
 from tapir.accounts.models import UserInfo
@@ -7,16 +7,17 @@ from tapir.coop.models import ShareOwnership, DraftUser, ShareOwner
 from tapir.utils.forms import CombinedFormBase
 
 
-class CoopShareOwnershipForm(forms.ModelForm):
+class ShareOwnershipForm(forms.ModelForm):
     class Meta:
         model = ShareOwnership
-        fields = (
+        fields = [
             "start_date",
             "end_date",
-        )
-
-    start_date = forms.DateField(widget=AdminDateWidget())
-    end_date = forms.DateField(widget=AdminDateWidget(), required=False)
+        ]
+        widgets = {
+            "start_date": DateInput(),
+            "end_date": DateInput(),
+        }
 
 
 class DraftUserForm(forms.ModelForm):

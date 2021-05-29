@@ -129,11 +129,17 @@ class UserInfo(models.Model):
         blank=True,
     )
 
+    # TODO(Leon Handreke): Remove this temporary field again after the Startnext member integration is done
+    # It's only used to send special emails to these members
     is_from_startnext = models.BooleanField(
         _("Comes from Startnext May 2021"), default=False
     )
+
     is_using_deferred_payments = models.BooleanField(
         _("Uses deferred payments"), default=False
+    )
+    is_investing = models.BooleanField(
+        _("Is an investing (not active) member"), default=False
     )
 
     def get_display_name(self):

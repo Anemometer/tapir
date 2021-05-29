@@ -1,3 +1,4 @@
+import csv
 from datetime import date
 
 from django.contrib import messages
@@ -9,6 +10,7 @@ from django.db.models import Q
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
+from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views import generic
 from django.views.decorators.csrf import csrf_protect
@@ -19,7 +21,7 @@ from tapir.accounts.forms import UserInfoAdminForm
 from tapir.accounts.models import TapirUser
 from tapir.coop import pdfs
 from tapir.coop.forms import (
-    CoopShareOwnershipForm,
+    ShareOwnershipForm,
     DraftUserForm,
     ShareOwnerForm,
     DraftUserCreateForm,
@@ -31,7 +33,7 @@ from tapir.coop.pdfs import get_membership_agreement_pdf
 
 class ShareOwnershipViewMixin:
     model = ShareOwnership
-    form_class = CoopShareOwnershipForm
+    form_class = ShareOwnershipForm
 
     def get_success_url(self):
         # After successful creation or update of a ShareOwnership, return to the user overview page.
@@ -147,7 +149,7 @@ class DraftUserDeleteView(
     PermissionRequiredMixin, DraftUserViewMixin, generic.DeleteView
 ):
     permission_required = "coop.manage"
-    success_url = "/coop/user/draft/"
+    success_url = reverse_lazy("coop:draftuser_list")
     pass
 
 
@@ -282,8 +284,8 @@ class CreateUserFromShareOwnerView(PermissionRequiredMixin, generic.CreateView):
 @csrf_protect
 @permission_required("coop.manage")
 def create_share_owner_from_draftuser(request, pk):
-    # This is intended for "Investing Members" : members that own a share but don't intend to participate actively
-    # Therefore, compared to "create_user_from_draftuser", we create a ShareOwner object but no TapirUser
+    # For now, we don't create users for our new members yet but only ShareOwners. Later, this will be used for
+    # investing members
 
     draft = DraftUser.objects.get(pk=pk)
     if not draft.signed_membership_agreement:
@@ -299,7 +301,6 @@ def create_share_owner_from_draftuser(request, pk):
         share_owner = ShareOwner.objects.create()
         share_owner.user = None
         share_owner.user_info = draft.user_info
-        share_owner.is_investing = True
         share_owner.save()
 
         for _ in range(0, draft.num_shares):
@@ -382,10 +383,10 @@ class ShareOwnerSearchMixin:
             filter_ = Q(last_name__icontains="")
             for search in searches:
                 search_filter = (
-                    Q(last_name__icontains=search)
-                    | Q(first_name__icontains=search)
-                    | Q(user__first_name__icontains=search)
-                    | Q(user__last_name__icontains=search)
+                    Q(last_name__unaccent__icontains=search)
+                    | Q(first_name__unaccent__icontains=search)
+                    | Q(user__first_name__unaccent__icontains=search)
+                    | Q(user__last_name__unaccent__icontains=search)
                 )
                 filter_ = filter_ & search_filter
 
@@ -394,18 +395,55 @@ class ShareOwnerSearchMixin:
         return queryset
 
 
-class ActiveShareOwnerListView(
-    PermissionRequiredMixin, ShareOwnerSearchMixin, generic.ListView
-):
-    permission_required = "coop.manage"
-    model = ShareOwner
-    template_name = "coop/shareowner_list.html"
-
+class CurrentShareOwnerMixin:
     def get_queryset(self):
-        # TODO(Leon Handreke): Allow passing a date
         return (
             super()
             .get_queryset()
             .filter(share_ownerships__in=ShareOwnership.objects.active_temporal())
             .distinct()
         )
+
+
+class CurrentShareOwnerListView(
+    PermissionRequiredMixin,
+    ShareOwnerSearchMixin,
+    CurrentShareOwnerMixin,
+    generic.ListView,
+):
+    permission_required = "coop.manage"
+    model = ShareOwner
+    template_name = "coop/shareowner_list.html"
+
+
+class ShareOwnerExportMailchimpView(
+    PermissionRequiredMixin, CurrentShareOwnerMixin, generic.list.BaseListView
+):
+    permission_required = "coop.manage"
+    model = ShareOwner
+
+    def get_queryset(self):
+        # Only active members should be on our mailing lists
+        return super().get_queryset().filter(is_investing=False)
+
+    def render_to_response(self, context, **response_kwargs):
+        response = HttpResponse(content_type="text/csv")
+        response[
+            "Content-Disposition"
+        ] = 'attachment; filename="supercoop_members_mailchimp.csv"'
+        writer = csv.writer(response)
+
+        writer.writerow(["Email Address", "First Name", "Last Name", "Address", "TAGS"])
+        for owner in context["object_list"]:
+            if not owner.get_info().email:
+                continue
+
+            # For some weird reason the tags are in quotes
+            lang_tag = ""
+            if owner.preferred_language == "de":
+                lang_tag = '"Deutsch"'
+            if owner.preferred_language == "en":
+                lang_tag = '"English"'
+            writer.writerow([owner.get_info().email, "", "", "", lang_tag])
+
+        return response

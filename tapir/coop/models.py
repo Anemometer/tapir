@@ -30,10 +30,6 @@ class ShareOwner(models.Model):
         on_delete=models.PROTECT,
     )
 
-    is_investing = models.BooleanField(
-        verbose_name=_("Is investing member"), default=False
-    )
-
     def clean(self):
         r = super().clean()
         if self.user_info.is_company and self.user:
@@ -77,6 +73,7 @@ class DraftUser(models.Model):
     num_shares = models.IntegerField(
         _("Number of Shares"), blank=False, editable=False, default=1
     )
+
     attended_welcome_session = models.BooleanField(
         _("Attended Welcome Session"), default=False
     )
