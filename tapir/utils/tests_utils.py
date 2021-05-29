@@ -12,6 +12,9 @@ class TapirSeleniumTestBase(LiveServerTestCase):
     DEFAULT_TIMEOUT = 5
     selenium: WebDriver
 
+    def _fixture_teardown(self):
+        pass
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
