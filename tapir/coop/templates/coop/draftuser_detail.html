@@ -29,38 +29,23 @@
                 </div>
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Email" %}:</div>
-<<<<<<< HEAD
                     <div class="col-9" id="draft_user_email">{{ object.user_info.email }}</div>
                 </div>
                 <div class="row m-1">
-                    <div class="col-3 font-weight-bold text-right">{% trans "Birthdate" %}:</div>
+                    <div class="col-3 font-weight-bold text-right">{% trans "Date of birth" %}:</div>
                     <div class="col-9" id="draft_user_birthdate">
                         {% if object.user_info.date_of_birth %}
                             {{ object.user_info.date_of_birth|date:"d.m.Y" }}
-=======
-                    <div class="col-9">{{ object.email }}</div>
-                </div>
-                <div class="row m-1">
-                    <div class="col-3 font-weight-bold text-right">{% trans "Birthdate" %}:</div>
-                    <div class="col-9">
-                        {% if object.birthdate %}
-                            {{ object.birthdate|date:"d.m.Y" }}
->>>>>>> master
                         {% else %}
                             <span class="text-danger">Missing</span>
                         {% endif %}</div>
+
                 </div>
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Address" %}:</div>
-<<<<<<< HEAD
                     <div class="col-9" id="draft_user_address">
                         {% if object.user_info.street and object.user_info.city %}
                             {{ object.user_info.get_display_address }}
-=======
-                    <div class="col-9">
-                        {% if object.street and object.city %}
-                            {{ object.get_display_address }}
->>>>>>> master
                         {% else %}
                             <span class="text-danger">{% trans "Missing" %}</span>
                         {% endif %}
@@ -81,7 +66,7 @@
 
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Shares requested" %}</div>
-                    <div class="col-4">{{ object.num_shares }}</div>
+                    <div class="col-4" id="draft_user_num_shares">{{ object.num_shares }}</div>
                 </div>
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">{% trans "Welcome Session" %}:</div>

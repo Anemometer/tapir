@@ -83,7 +83,7 @@ class DraftUserListView(PermissionRequiredMixin, DraftUserViewMixin, generic.Lis
 
 class DraftUserCreateView(PermissionRequiredMixin, FormView):
     permission_required = "coop.manage"
-    template_name = "coop/draftuser_create_form.html"
+    template_name = "coop/draftuser_form.html"
     form_class = DraftUserCreateForm
 
     def form_valid(self, form):
