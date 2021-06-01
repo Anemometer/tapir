@@ -75,6 +75,16 @@ class ApplicantTestBase(TapirSeleniumTestBase):
         user_rows[0].find_element_by_tag_name("a").click()
         self.wait_until_element_present_by_id("draft_user_detail_card")
 
+    def go_to_share_owner_detail_page(self, user: JsonUser):
+        self.selenium.get(self.URL_BASE + reverse("coop:active_shareowner_list"))
+        self.wait_until_element_present_by_id("share_owner_table")
+        user_links = self.selenium.find_element_by_id(
+            "share_owner_table"
+        ).find_elements_by_xpath("//a[text() = '" + user.get_display_name() + "']")
+        self.assertEqual(len(user_links), 1)
+        user_links[0].click()
+        self.wait_until_element_present_by_id("share_owner_detail_card")
+
 
 class TestApplicantRegister(ApplicantTestBase):
     @tag("selenium")

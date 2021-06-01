@@ -26,6 +26,7 @@ from tapir.coop.forms import (
     ShareOwnerForm,
     DraftUserCreateForm,
     DraftUserRegisterForm,
+    ShareOwnerEditForm,
 )
 from tapir.coop.models import ShareOwnership, DraftUser, ShareOwner
 from tapir.coop.pdfs import get_membership_agreement_pdf
@@ -163,12 +164,21 @@ class ShareOwnerDetailView(
     permission_required = "coop.manage"
 
 
-class ShareOwnerUpdateView(
-    PermissionRequiredMixin, ShareOwnerViewMixin, generic.UpdateView
-):
-    permission_required = "accounts.manage"
-    model = ShareOwner
-    form_class = ShareOwnerForm
+class ShareOwnerUpdateView(PermissionRequiredMixin, FormView):
+    permission_required = "coop.manage"
+    template_name = "coop/shareowner_form.html"
+    form_class = ShareOwnerEditForm
+
+    def get_initial(self):
+        initial = super().get_initial()
+        share_owner = ShareOwner.objects.get(id=self.kwargs["pk"])
+        initial["ShareOwner"] = share_owner
+        initial["UserInfo"] = share_owner.user_info
+        return initial
+
+    def form_valid(self, form):
+        share_owner = form.save()
+        return redirect(share_owner.get_absolute_url())
 
 
 @require_GET
@@ -367,7 +377,10 @@ def shareowner_membership_confirmation(request, pk):
 class ShareOwnerSearchMixin:
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        if queryset.count() == 1:
+        search_string = self.request.GET.get("search", "")
+        is_a_search = search_string is not ""
+
+        if is_a_search and queryset.count() == 1:
             return HttpResponseRedirect(queryset.first().get_absolute_url())
         return super().get(request, *args, **kwargs)
 
@@ -380,13 +393,10 @@ class ShareOwnerSearchMixin:
         if len(searches) == 1 and searches[0].isdigit():
             queryset = queryset.filter(pk=int(searches[0]))
         elif searches:
-            filter_ = Q(last_name__icontains="")
+            filter_ = Q(user_info__last_name__icontains="")
             for search in searches:
-                search_filter = (
-                    Q(last_name__unaccent__icontains=search)
-                    | Q(first_name__unaccent__icontains=search)
-                    | Q(user__first_name__unaccent__icontains=search)
-                    | Q(user__last_name__unaccent__icontains=search)
+                search_filter = Q(user_info__last_name__unaccent__icontains=search) | Q(
+                    user_info__first_name__unaccent__icontains=search
                 )
                 filter_ = filter_ & search_filter
 

@@ -14,7 +14,7 @@
                     <a class="btn btn-outline-primary" href="{% url "accounts:user_detail" object.user.pk %}">{% trans "Go to user page" %}</a>
                 {% elif not object.is_company %}
                     <span>
-                        <a class="btn btn-outline-primary" href="{% url "coop:shareowner_update" object.pk %}">{% trans "Edit share owner" %}</a>
+                        <a class="btn btn-outline-primary" href="{% url "coop:shareowner_update" object.pk %}" id="edit_share_owner_button">{% trans "Edit share owner" %}</a>
                         <a class="btn btn-primary" href="{% url "coop:create_user_from_shareowner" object.pk %}">{% trans "Create user" %}</a>
                     </span>
                 {% endif %}
@@ -67,7 +67,7 @@
 
                 <div class="row m-1">
                     <div class="col-3 font-weight-bold text-right">From Startnext</div>
-                    <div class="col-4" id="share_owner_num_shares">{{ object.from_startnext|yesno:"Yes,No" }}</div>
+                    <div class="col-4" id="share_owner_num_shares">{{ object.user_info.is_from_startnext|yesno:"Yes,No" }}</div>
                 </div>
             </div>
         </div>

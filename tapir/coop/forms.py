@@ -59,6 +59,17 @@ class DraftUserRegisterForm(CombinedFormBase):
 class ShareOwnerForm(forms.ModelForm):
     class Meta:
         model = ShareOwner
-        fields = [
-            "user_info",
-        ]
+        fields = []
+
+
+class ShareOwnerEditForm(CombinedFormBase):
+    form_classes = [UserInfoAdminForm, ShareOwnerForm]
+
+    def save(self) -> ShareOwner:
+        user_info_form = getattr(self, UserInfoAdminForm.__name__.lower())
+        user_info: UserInfo = user_info_form.save()
+        share_owner_form = getattr(self, ShareOwnerForm.__name__.lower())
+        share_owner: ShareOwner = share_owner_form.save()
+        share_owner.user_info = user_info
+        share_owner.save()
+        return share_owner
