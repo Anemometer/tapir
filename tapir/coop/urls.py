@@ -1,6 +1,7 @@
 from django.urls import path
 
 from tapir.coop import views
+from tapir.coop.views import create_tapir_user_from_share_owner
 
 app_name = "coop"
 urlpatterns = [
@@ -66,13 +67,8 @@ urlpatterns = [
         name="empty_membership_agreement",
     ),
     path(
-        "user/draft/<int:pk>/create_user",
-        views.create_user_from_draftuser,
-        name="draftuser_create_user",
-    ),
-    path(
         "member/<int:shareowner_pk>/create_user",
-        views.CreateUserFromShareOwnerView.as_view(),
+        create_tapir_user_from_share_owner,
         name="create_user_from_shareowner",
     ),
     path(

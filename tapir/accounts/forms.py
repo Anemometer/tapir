@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import forms as auth_forms
-from django.forms import TextInput, HiddenInput
+from django.forms import TextInput
 
 from tapir.accounts.models import UserInfo
 from tapir.utils.forms import DateInput

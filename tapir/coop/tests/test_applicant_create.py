@@ -77,18 +77,33 @@ class TestEditShareOwnerInfos(ApplicantTestBase, ApplicantToTapirUserMixin):
     @tag("selenium")
     def test_edit_share_owner(self):
         # A coop member edits the name of a share owner
-        self.selenium.get(self.URL_BASE)
         self.login_as_admin()
 
         user = self.get_test_user(self.json_file)
+        name_before = user.first_name
+        user.first_name = "an edited first name"
+        self.edit_share_owner_name(user)
+        self.check_share_owner_details(user)
+
+        # Set the username back to what it was for the following tests
+        user.first_name = name_before
+        self.edit_share_owner_name(user)
+
+    def edit_share_owner_name(self, user: JsonUser):
         self.go_to_share_owner_detail_page(user)
         self.selenium.find_element_by_id("edit_share_owner_button").click()
-
-        user.first_name = "an edited first name"
 
         first_name_field = self.selenium.find_element_by_id("id_first_name")
         first_name_field.clear()
         first_name_field.send_keys(user.first_name)
         self.selenium.find_element_by_xpath('//button[@type="submit"]').click()
+        self.wait_until_element_present_by_id("share_owner_detail_card")
 
-        self.check_share_owner_details(user)
+
+class TestCreateMemberFromShareOwner(ApplicantTestBase, ApplicantToTapirUserMixin):
+    @tag("selenium")
+    def test_create_member_from_share_owner(self):
+        self.login_as_admin()
+        user = self.get_test_user(self.json_file)
+        self.go_to_share_owner_detail_page(user)
+        self.selenium.find_element_by_id("create_member_button").click()

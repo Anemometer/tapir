@@ -4,6 +4,7 @@ from datetime import date
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.db import transaction
 from django.db.models import Q
@@ -17,7 +18,6 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST, require_GET
 from django.views.generic import UpdateView, CreateView, FormView
 
-from tapir.accounts.forms import UserInfoAdminForm
 from tapir.accounts.models import TapirUser
 from tapir.coop import pdfs
 from tapir.coop.forms import (
@@ -228,66 +228,19 @@ def mark_attended_welcome_session(request, pk):
     return redirect(u)
 
 
-@require_POST
 @csrf_protect
 @permission_required("coop.manage")
-def create_user_from_draftuser(request, pk):
-    draft = DraftUser.objects.get(pk=pk)
-    if not draft.signed_membership_agreement:
-        # TODO(Leon Handreke): Error message
-        return redirect(draft)
+def create_tapir_user_from_share_owner(request, shareowner_pk):
+    share_owner = ShareOwner.objects.get(pk=shareowner_pk)
 
-    with transaction.atomic():
-        u = TapirUser.objects.create(
-            user_info=draft.user_info,
-        )
-        if draft.num_shares > 0:
-            share_owner = ShareOwner.objects.create(user=u, is_company=False)
-            for _ in range(0, draft.num_shares):
-                ShareOwnership.objects.create(
-                    owner=share_owner,
-                    start_date=date.today(),
-                )
-        draft.delete()
+    if share_owner.user is not None:
+        raise ValidationError("This ShareOwner already has a User")
+    if share_owner.user_info.is_company:
+        raise ValidationError("This ShareOwner is a company")
 
-    return redirect(u.get_absolute_url())
-
-
-class CreateUserFromShareOwnerView(PermissionRequiredMixin, generic.CreateView):
-    model = TapirUser
-    template_name = "coop/create_user_from_shareowner_form.html"
-    permission_required = "coop.manage"
-    fields = ["first_name", "last_name", "username"]
-
-    def get_shareowner(self):
-        return get_object_or_404(ShareOwner, pk=self.kwargs["shareowner_pk"])
-
-    def dispatch(self, request, *args, **kwargs):
-        owner = self.get_shareowner()
-        # Not sure if 403 is the right error code here...
-        if owner.user is not None:
-            return HttpResponseForbidden("This ShareOwner already has a User")
-        if owner.user_info.is_company:
-            return HttpResponseForbidden("This ShareOwner is a company")
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        owner = self.get_shareowner()
-        user = TapirUser(
-            user_info=owner.user_info,
-        )
-        kwargs.update({"instance": user})
-        return kwargs
-
-    def form_valid(self, form):
-        with transaction.atomic():
-            response = super().form_valid(form)
-            owner = self.get_shareowner()
-            owner.user = form.instance
-            owner.save()
-            return response
+    tapir_user = TapirUser.objects.create(user_info=share_owner.user_info)
+    tapir_user.save()
+    return redirect(tapir_user.get_absolute_url())
 
 
 @require_POST
@@ -378,7 +331,7 @@ class ShareOwnerSearchMixin:
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         search_string = self.request.GET.get("search", "")
-        is_a_search = search_string is not ""
+        is_a_search = search_string != ""
 
         if is_a_search and queryset.count() == 1:
             return HttpResponseRedirect(queryset.first().get_absolute_url())
