@@ -1,11 +1,14 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage
 from django.db import models
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from tapir.accounts.models import TapirUser, UserInfo
+from tapir.coop import pdfs
 from tapir.utils.models import DurationModelMixin
 
 COOP_SHARE_PRICE = Decimal(100)
@@ -20,6 +23,20 @@ class ShareOwner(models.Model):
     """
 
     user_info = models.OneToOneField(UserInfo, on_delete=models.PROTECT, null=True)
+
+    is_company = models.BooleanField(_("Is company"), blank=False, default=False)
+    company_name = models.CharField(_("Company name"), max_length=150, blank=True)
+    ratenzahlung = models.BooleanField(verbose_name=_("Ratenzahlung"), default=False)
+    is_investing = models.BooleanField(
+        _("Is an investing (not active) member"), default=False
+    )
+
+    # TODO(Leon Handreke): Remove this temporary field again after the Startnext member integration is done
+    # It's only used to send special emails to these members
+    is_from_startnext = models.BooleanField(
+        _("Comes from Startnext May 2021"), default=False
+    )
+    startnext_welcome_email_sent = models.BooleanField(default=False)
 
     # Only for owners that have a user account
     user = models.OneToOneField(
@@ -97,3 +114,35 @@ class DraftUser(models.Model):
 
     def can_create_user(self):
         return self.user_info.email and self.signed_membership_agreement
+
+    def send_startnext_email(self):
+        if not self.from_startnext:
+            raise Exception("Not from startnext")
+        if self.startnext_welcome_email_sent:
+            print(
+                "Welcome email for %d %s already sent"
+                % (self.pk, self.get_display_name())
+            )
+            return
+
+        mail = EmailMessage(
+            subject=_("Willkommen bei SuperCoop eG!"),
+            body=render_to_string(
+                "coop/email/membership_agreement_startnext.html", {"u": self}
+            ),
+            from_email="SuperCoop Berlin eG <mitglied@supercoop.de>",
+            to=[self.email],
+            bcc=["mitglied@supercoop.de"],
+            attachments=[
+                (
+                    "Beteiligungserklärung %s.pdf" % self.get_display_name(),
+                    pdfs.get_membership_agreement_pdf(self).write_pdf(),
+                    "application/pdf",
+                )
+            ],
+        )
+        mail.content_subtype = "html"
+        mail.send()
+
+        self.startnext_welcome_email_sent = True
+        self.save()

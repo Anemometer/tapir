@@ -25,6 +25,8 @@ class DraftUserForm(forms.ModelForm):
         model = DraftUser
         fields = [
             "attended_welcome_session",
+            "paid_membership_fee",
+            "signed_membership_agreement",
         ]
 
 
@@ -59,7 +61,12 @@ class DraftUserRegisterForm(CombinedFormBase):
 class ShareOwnerForm(forms.ModelForm):
     class Meta:
         model = ShareOwner
-        fields = []
+        fields = [
+            "is_from_startnext",
+            "is_company",
+            "startnext_welcome_email_sent",
+            "ratenzahlung",
+        ]
 
 
 class ShareOwnerEditForm(CombinedFormBase):

@@ -21,7 +21,6 @@ class UserInfoAdminForm(forms.ModelForm):
         fields = [
             "first_name",
             "last_name",
-            "username",
             "email",
             "phone_number",
             "date_of_birth",
@@ -31,20 +30,15 @@ class UserInfoAdminForm(forms.ModelForm):
             "city",
             "country",
             "preferred_language",
-            "is_from_startnext",
-            "is_using_deferred_payments",
-            "is_company",
         ]
         required = [
             "first_name",
             "last_name",
-            "username",
             "email",
             "phone_number",
         ]
         widgets = {
             "date_of_birth": DateInput(),
-            "username": TextInput(attrs={"readonly": True}),
             "phone_number": TextInput(attrs={"pattern": "^\\+?\\d{0,13}"}),
         }
 
@@ -64,7 +58,6 @@ class UserInfoNonAdminForm(forms.ModelForm):
         fields = [
             "first_name",
             "last_name",
-            "username",
             "email",
             "phone_number",
             "date_of_birth",
@@ -74,18 +67,15 @@ class UserInfoNonAdminForm(forms.ModelForm):
             "city",
             "country",
             "preferred_language",
-            "is_company",
         ]
         required = [
             "first_name",
             "last_name",
-            "username",
             "email",
             "phone_number",
         ]
         widgets = {
             "date_of_birth": DateInput(),
-            "username": TextInput(attrs={"readonly": True}),
             "phone_number": TextInput(attrs={"pattern": "^\\+?\\d{0,13}"}),
         }
 

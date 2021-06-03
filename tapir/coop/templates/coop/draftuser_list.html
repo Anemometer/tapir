@@ -19,6 +19,8 @@
                 <th>{% trans "First Name" %}</th>
                 <th>{% trans "Last Name" %}</th>
                 <th>{% trans "Email" %}</th>
+                <th>{% trans "Beteiligungserkärung" %}</th>
+                <th>{% trans "Payment" %}</th>
                 <th></th>
                 </thead>
                 {% for draft_user in object_list %}
@@ -26,6 +28,20 @@
                         <td class="align-middle">{{ draft_user.user_info.first_name }}</td>
                         <td class="align-middle">{{ draft_user.user_info.last_name }}</td>
                         <td class="align-middle">{{ draft_user.user_info.email }}</td>
+                        <td class="align-middle">
+                            {% if u.signed_membership_agreement %}
+                                <span class="text-success">{% trans "Signed" %}</span>
+                            {% else %}
+                                <span class="text-warning">{% trans "Not signed" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            {% if u.paid_membership_fee %}
+                                <span class="text-success">{% trans "Paid" %}</span>
+                            {% else %}
+                                <span class="text-warning">{% trans "Not paid" %}</span>
+                            {% endif %}
+                        </td>
                         <td class="align-middle">
                             <a href="{% url "coop:draftuser_detail" draft_user.pk %}">
                                 <button type="button" class="btn btn-outline-primary">

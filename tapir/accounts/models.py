@@ -98,20 +98,9 @@ class LdapUser(AbstractUser):
 
 
 class UserInfo(models.Model):
-    username_validator = validators.UsernameValidator
-
-    username = models.CharField(
-        _("username"),
-        max_length=150,
-        validators=[username_validator],
-    )
-
-    first_name = models.CharField(_("First name"), max_length=150)
-    last_name = models.CharField(_("Last name"), max_length=150)
+    first_name = models.CharField(_("First name"), max_length=150, blank=False)
+    last_name = models.CharField(_("Last name"), max_length=150, blank=False)
     email = models.EmailField(_("Email address"))
-
-    is_company = models.BooleanField(_("Is company"), blank=False)
-    company_name = models.CharField(_("Company name"), max_length=150, blank=True)
 
     phone_number = models.CharField(_("Phone number"), blank=True, max_length=20)
     date_of_birth = models.DateField(_("Date of birth"), null=True)
@@ -129,19 +118,6 @@ class UserInfo(models.Model):
         blank=True,
     )
 
-    # TODO(Leon Handreke): Remove this temporary field again after the Startnext member integration is done
-    # It's only used to send special emails to these members
-    is_from_startnext = models.BooleanField(
-        _("Comes from Startnext May 2021"), default=False
-    )
-
-    is_using_deferred_payments = models.BooleanField(
-        _("Uses deferred payments"), default=False
-    )
-    is_investing = models.BooleanField(
-        _("Is an investing (not active) member"), default=False
-    )
-
     def get_display_name(self):
         if self.is_company:
             return self.company_name
@@ -154,6 +130,8 @@ class UserInfo(models.Model):
 
 
 class TapirUser(LdapUser):
+    username_validator = validators.UsernameValidator
+
     user_info = models.OneToOneField(UserInfo, on_delete=models.PROTECT, null=True)
 
     def get_absolute_url(self):

@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
@@ -23,7 +23,6 @@ from tapir.coop import pdfs
 from tapir.coop.forms import (
     ShareOwnershipForm,
     DraftUserForm,
-    ShareOwnerForm,
     DraftUserCreateForm,
     DraftUserRegisterForm,
     ShareOwnerEditForm,
@@ -324,6 +323,18 @@ def shareowner_membership_confirmation(request, pk):
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = 'filename="{}"'.format(filename)
     response.write(pdfs.get_shareowner_membership_confirmation_pdf(owner).write_pdf())
+    return response
+
+
+@require_GET
+@permission_required("coop.manage")
+def shareowner_membership_agreement(request, pk):
+    owner = get_object_or_404(ShareOwner, pk=pk)
+    filename = "Beteiligungserklärung %s.pdf" % owner.get_display_name()
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'filename="{}"'.format(filename)
+    response.write(pdfs.get_membership_agreement_pdf(owner).write_pdf())
     return response
 
 
